@@ -1,0 +1,353 @@
+/* ============================================================
+   交互式玻璃拟态主题  ——  auth.css
+   视觉与交互参考以下开源项目（均为 MIT）：
+     · VincentGarreau/particles.js      粒子背景 + 鼠标吸引 + 就近连线
+     · micku7zu/vanilla-tilt.js         3D 倾斜 + 眩光
+                                        (perspective:1000 / max:15 / cubic-bezier(.03,.98,.52,.99))
+     · liuqingsong1528/Peek-Free-Login  眼球跟随 + 随机眨眼 + 聚焦密码框时捂眼
+   ============================================================ */
+
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+
+body {
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;    /* 水平居中 */
+    align-items: center;        /* 垂直居中 */
+    padding: 1.5rem;
+    font-family: "Microsoft YaHei", "PingFang SC", Arial, sans-serif;
+    background: radial-gradient(circle at 50% 45%, #0d0733 0%, #04001b 65%);
+    color: rgba(255, 255, 255, .85);
+    overflow-x: hidden;         /* 只挡横向溢出；窗口太矮时纵向仍可滚动 */
+}
+
+/* ================= 粒子画布（最底层） ================= */
+#bg {
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+}
+
+/* ================= 3D 舞台：给卡片提供透视 ================= */
+.stage {
+    position: relative;
+    z-index: 1;
+    perspective: 1000px;
+}
+
+/* ================= 玻璃卡片 ================= */
+.box {
+    position: relative;
+    width: 100%;
+    max-width: 24rem;
+    padding: 1.5rem 2rem 2rem;
+    background: rgba(255, 255, 255, .08);
+    border: 1px solid rgba(255, 255, 255, .14);
+    border-radius: 20px;
+    box-shadow: 0 0 25px rgba(0, 0, 0, .55);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+    transform-style: preserve-3d;
+    transition: transform .3s cubic-bezier(.03, .98, .52, .99);
+    will-change: transform;
+}
+
+/* 眩光：跟着鼠标在卡片上滑动的一团柔光（对应 vanilla-tilt 的 glare） */
+.box::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    background: radial-gradient(circle at var(--gx, 50%) var(--gy, 50%),
+                rgba(255, 255, 255, .18), transparent 45%);
+    opacity: 0;
+    transition: opacity .25s;
+    pointer-events: none;
+}
+.stage:hover .box::after { opacity: 1; }
+
+.box h3 {
+    margin: 0 0 1.25rem;
+    text-align: center;
+    font-size: 1.3rem;
+    font-weight: 400;
+    letter-spacing: 2px;
+    color: rgba(255, 255, 255, .92);
+}
+
+/* ================= 捂眼小角色 ================= */
+.guard {
+    position: relative;
+    width: 76px;
+    height: 76px;
+    margin: 0 auto 1.25rem;
+    transform: translateZ(45px);            /* 让它从卡片上浮起来 */
+    transition: transform .25s ease;
+}
+.guard.up { transform: translateZ(45px) scale(1.08); }
+
+.guard .face {
+    position: absolute;
+    inset: 0;
+    border-radius: 50% 50% 46% 46%;
+    background: linear-gradient(160deg, #ffe9b0, #ffd062);
+    box-shadow: inset 0 -6px 12px rgba(0, 0, 0, .12), 0 6px 18px rgba(0, 0, 0, .3);
+}
+
+/* 眼睛：白眼球 + 会转动的瞳孔 */
+.guard .eye {
+    position: absolute;
+    top: 30%;
+    width: 17px;
+    height: 17px;
+    border-radius: 50%;
+    background: #fff;
+    overflow: hidden;
+    transition: height .15s ease;
+}
+.guard .eye.l { left: 19%; }
+.guard .eye.r { right: 19%; }
+
+.guard .pupil {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 8px;
+    height: 8px;
+    margin: -4px 0 0 -4px;
+    border-radius: 50%;
+    background: #2b2b3a;
+    transition: transform .08s linear;
+}
+
+/* 眨眼：把眼睛压成一条缝 */
+.guard.blink .eye { height: 2px; }
+.guard.peek  .eye { height: 2px; }          /* 捂眼时顺便闭眼 */
+
+/* 嘴巴 */
+.guard .mouth {
+    position: absolute;
+    left: 50%;
+    bottom: 20%;
+    width: 18px;
+    height: 9px;
+    margin-left: -9px;
+    border-bottom: 2px solid #c08840;
+    border-radius: 0 0 50% 50%;
+}
+
+/* 两只手：平时藏在下巴位置，聚焦密码框时滑上来捂住眼睛 */
+.guard .hand {
+    position: absolute;
+    top: 66%;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: linear-gradient(160deg, #ffe9b0, #ffc84a);
+    box-shadow: inset 0 -4px 8px rgba(0, 0, 0, .12);
+    opacity: 0;
+    transition: top .25s ease, opacity .25s ease;
+}
+.guard .hand.l { left: 5%; }
+.guard .hand.r { right: 5%; }
+
+.guard.peek .hand { top: 20%; opacity: 1; }
+
+/* ================= 输入框 ================= */
+.box label {
+    display: block;
+    margin-bottom: .4rem;
+    font-size: .8rem;
+    color: rgba(255, 255, 255, .65);
+}
+
+.box input[type=text],
+.box input[type=password] {
+    width: 100%;
+    height: 2.6rem;
+    padding: 0 .8rem;
+    margin-bottom: 1.15rem;
+    background: rgba(255, 255, 255, .1);
+    border: 2px solid rgba(255, 255, 255, .08);
+    border-radius: 10px;
+    color: #fff;
+    font-size: .95rem;
+    outline: none;
+    transition: border-color .25s, background .25s, box-shadow .25s, transform .25s;
+}
+
+.box input[type=text]:hover,
+.box input[type=password]:hover {
+    background: rgba(255, 255, 255, .15);
+}
+
+/* 聚焦：青色描边 + 外发光 + 轻轻浮起（3D 卡片里可见的层次感） */
+.box input[type=text]:focus,
+.box input[type=password]:focus {
+    border-color: rgb(0, 229, 255);
+    background: rgba(255, 255, 255, .17);
+    box-shadow: 0 0 0 4px rgba(0, 229, 255, .14), 0 0 20px rgba(0, 229, 255, .35);
+    transform: translateZ(24px);
+}
+
+.box input::placeholder { color: rgba(255, 255, 255, .42); }
+
+/* ================= 渐变按钮 ================= */
+.box input[type=submit] {
+    display: block;
+    width: 62%;
+    height: 2.6rem;
+    margin: .6rem auto 0;
+    border: none;
+    border-radius: 10px;
+    background: linear-gradient(120deg, #00e5ff 0%, #7c4dff 55%, #ff2d95 100%);
+    background-size: 220% 100%;
+    color: #fff;
+    font-size: .95rem;
+    letter-spacing: 2px;
+    cursor: pointer;
+    transition: background-position .45s ease, transform .15s ease, box-shadow .3s ease;
+}
+
+.box input[type=submit]:hover {
+    background-position: 100% 0;
+    box-shadow: 0 0 22px rgba(124, 77, 255, .6);
+}
+
+.box input[type=submit]:active {
+    transform: scale(.96);
+}
+
+/* ================= 提示文字 ================= */
+.msg {
+    min-height: 1.2rem;
+    margin: .9rem 0 0;
+    font-size: .85rem;
+    text-align: center;
+}
+.error { color: #ff9f9f; }
+.ok    { color: #8affc1; }
+
+.tip {
+    margin: 1rem 0 0;
+    text-align: center;
+    font-size: .85rem;
+    color: rgba(255, 255, 255, .7);
+}
+.tip a {
+    color: #7fe3ff;
+    text-decoration: none;
+    transition: all .3s;
+}
+.tip a:hover {
+    color: #fff;
+    text-shadow: 0 0 10px rgba(127, 227, 255, .9);
+}
+
+/* ============================================================
+   登录成功页专用
+   ============================================================ */
+
+/* 彩带层：盖在卡片上方，但不挡鼠标点击 */
+#fx {
+    position: fixed;
+    inset: 0;
+    z-index: 5;
+    pointer-events: none;
+}
+
+/* 打勾图标：圆环和对勾用 stroke-dashoffset 依次"画"出来 */
+.tick {
+    position: relative;
+    width: 78px;
+    height: 78px;
+    margin: 0 auto 1rem;
+}
+
+.tick svg {
+    display: block;
+    width: 100%;
+    height: 100%;
+}
+
+.tick-circle {
+    fill: none;
+    stroke: rgba(0, 229, 255, .85);
+    stroke-width: 2.5;
+    stroke-dasharray: 151;          /* 2 * π * 24 ≈ 151 */
+    stroke-dashoffset: 151;
+    animation: draw-circle .7s ease-out forwards;
+}
+
+.tick-path {
+    fill: none;
+    stroke: #8affc1;
+    stroke-width: 4;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    stroke-dasharray: 40;
+    stroke-dashoffset: 40;
+    animation: draw-check .4s .65s ease-out forwards;
+}
+
+@keyframes draw-circle { to { stroke-dashoffset: 0; } }
+@keyframes draw-check  { to { stroke-dashoffset: 0; } }
+
+/* 圆环外的脉冲光晕 */
+.tick::before {
+    content: "";
+    position: absolute;
+    inset: -4px;
+    border-radius: 50%;
+    border: 1px solid rgba(0, 229, 255, .45);
+    animation: pulse 2s ease-out infinite;
+}
+
+@keyframes pulse {
+    0%   { transform: scale(.85); opacity: .9; }
+    100% { transform: scale(1.3);  opacity: 0; }
+}
+
+/* 欢迎语：用户名用渐变文字突出 */
+.welcome {
+    margin: .2rem 0 0;
+    text-align: center;
+    font-size: .92rem;
+    color: rgba(255, 255, 255, .78);
+}
+
+.welcome b {
+    display: inline-block;
+    font-size: 1.15rem;
+    background: linear-gradient(90deg, #00e5ff, #7c4dff, #ff2d95);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    color: transparent;
+}
+
+/* 自动返回倒计时 */
+.count {
+    margin: .7rem 0 0;
+    text-align: center;
+    font-size: .78rem;
+    color: rgba(255, 255, 255, .45);
+}
+
+/* 小角色的庆祝状态：眼睛弯成 ^ ^，整体原地蹦跳 */
+.guard.happy .eye {
+    height: 9px;
+    background: transparent;
+    border-top: 3px solid #2b2b3a;
+    border-radius: 50% 50% 0 0 / 100% 100% 0 0;
+}
+
+.guard.happy .pupil { opacity: 0; }
+
+.guard.happy { animation: hop 1s ease-in-out infinite; }
+
+@keyframes hop {
+    0%, 100% { transform: translateZ(45px) translateY(0); }
+    50%      { transform: translateZ(45px) translateY(-9px); }
+}

@@ -1,0 +1,16 @@
+# ---------- 编译输出 ----------
+build/
+out/
+target/
+*.class
+
+# ---------- IDE ----------
+.idea/
+*.iml
+.vscode/
+.metadata/
+
+# ---------- 系统 ----------
+.DS_Store
+Thumbs.db
+desktop.ini
